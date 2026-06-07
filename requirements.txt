@@ -1,3 +1,2 @@
-python-telegram-bot[all]==21.6
-google-genai
-yt-dlp==2024.8.6
+python-telegram-bot
+google-generativeai
