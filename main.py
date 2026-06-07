@@ -1,10 +1,13 @@
 import os
-import anthropic
+import google.generativeai as genai
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
+
+genai.configure(api_key=GEMINI_KEY)
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -13,8 +16,7 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
          InlineKeyboardButton("🧠 ذكاء اصطناعي", callback_data="ai")],
     ])
     await update.message.reply_text(
-        f"👋 أهلاً {user.first_name}!\n\n"
-        "اختر خدمة:",
+        f"👋 أهلاً {user.first_name}!\n\nاختر خدمة:",
         reply_markup=kb
     )
 
@@ -34,13 +36,8 @@ async def message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if mode == "ai":
         msg = await update.message.reply_text("⏳ جارٍ المعالجة...")
         try:
-            client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-            res = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=1000,
-                messages=[{"role": "user", "content": text}]
-            )
-            await msg.edit_text(res.content[0].text)
+            res = model.generate_content(text)
+            await msg.edit_text(res.text)
         except Exception as e:
             await msg.edit_text(f"❌ خطأ: {e}")
     elif mode == "download":
