@@ -7,7 +7,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
 
 genai.configure(api_key=GEMINI_KEY)
-model = model = genai.GenerativeModel(gemini-1.5-flash-latest)
+model = genai.GenerativeModel("gemini-1.5-flash-latest")
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
