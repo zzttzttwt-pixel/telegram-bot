@@ -1,75 +1,43 @@
 import os
-import requests
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from google import genai
+from telegram import Update
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
+# 1. ضع مفتاح الـ API الخاص بـ Gemini هنا
+GEMINI_API_KEY = "ضع_مفتاح_جوجل_هنا"
+# 2. ضع التوكن الخاص ببوت تليجرام (الذي أخذته من BotFather) هنا
+TELEGRAM_BOT_TOKEN = "ضع_توكن_تليجرام_هنا"
 
-async def ask_ai(text):
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={"Authorization": f"Bearer {OPENROUTER_KEY}"},
-        json={
-            "model": "google/gemma-3-4b-it:free",
-            "messages": [{"role": "user", "content": text}]
-        }
-    )
-    return response.json()["choices"][0]["message"]["content"]
+# تهيئة عميل Gemini
+client = genai.Client(api_key=GEMINI_API_KEY)
 
-async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📥 تحميل فيديو", callback_data="download"),
-         InlineKeyboardButton("🧠 ذكاء اصطناعي", callback_data="ai")],
-    ])
-    await update.message.reply_text(
-        f"👋 أهلاً {user.first_name}!\n\nاختر خدمة:",
-        reply_markup=kb
-    )
-
-async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    if q.data == "download":
-        ctx.user_data["mode"] = "download"
-        await q.edit_message_text("📎 أرسل رابط يوتيوب أو تيك توك:")
-    elif q.data == "ai":
-        ctx.user_data["mode"] = "ai"
-        await q.edit_message_text("🧠 اكتب سؤالك:")
-
-async def message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    mode = ctx.user_data.get("mode")
-    text = update.message.text
-    if mode == "ai":
-        msg = await update.message.reply_text("⏳ جارٍ المعالجة...")
-        try:
-            reply = await ask_ai(text)
-            await msg.edit_text(reply)
-        except Exception as e:
-            await msg.edit_text(f"❌ خطأ: {e}")
-    elif mode == "download":
-        msg = await update.message.reply_text("⏳ جارٍ التحميل...")
-        try:
-            import yt_dlp, tempfile
-            with tempfile.TemporaryDirectory() as tmp:
-                opts = {"outtmpl": f"{tmp}/video.%(ext)s", "format": "best[height<=480]", "quiet": True}
-                with yt_dlp.YoutubeDL(opts) as ydl:
-                    info = ydl.extract_info(text, download=True)
-                    path = ydl.prepare_filename(info)
-            await msg.delete()
-            await update.message.reply_document(open(path, "rb"), caption=info.get("title",""))
-        except Exception as e:
-            await msg.edit_text(f"❌ {e}")
-    else:
-        await start(update, ctx)
+# دالة التعامل مع الرسائل القادمة من تليجرام
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_text = update.message.text # نص رسالة المستخدم
+    
+    try:
+        # إرسال النص إلى نموذج Gemini 3.5 Flash السريع
+        response = client.models.generate_content(
+            model='gemini-3.5-flash',
+            contents=user_text,
+        )
+        
+        # إرسال رد Gemini إلى مستخدم تليجرام
+        await update.message.reply_text(response.text)
+        
+    except Exception as e:
+        await update.message.reply_text("عذرًا، حدث خطأ أثناء معالجة الطلب.")
+        print(f"Error: {e}")
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message))
-    app.run_polling()
+    # تشغيل بوت تليجرام
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    # جعل البوت يستمع لجميع الرسائل النصية
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    print("البوت يعمل الآن ومربوط بـ Gemini...")
+    application.run_polling()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
