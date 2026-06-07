@@ -1,13 +1,21 @@
 import os
-import google.generativeai as genai
+import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
+OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
-genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel("gemini-pro")
+async def ask_ai(text):
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={"Authorization": f"Bearer {OPENROUTER_KEY}"},
+        json={
+            "model": "mistralai/mistral-7b-instruct:free",
+            "messages": [{"role": "user", "content": text}]
+        }
+    )
+    return response.json()["choices"][0]["message"]["content"]
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -36,8 +44,8 @@ async def message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if mode == "ai":
         msg = await update.message.reply_text("⏳ جارٍ المعالجة...")
         try:
-            res = model.generate_content(text)
-            await msg.edit_text(res.text)
+            reply = await ask_ai(text)
+            await msg.edit_text(reply)
         except Exception as e:
             await msg.edit_text(f"❌ خطأ: {e}")
     elif mode == "download":
