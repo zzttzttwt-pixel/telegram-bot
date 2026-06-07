@@ -1,0 +1,5 @@
+python-telegram-bot[all]==21.6
+anthropic==0.34.0
+yt-dlp==2024.8.6
+stripe==10.12.0
+flask==3.0.3
