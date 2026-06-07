@@ -37,7 +37,18 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     print("البوت يعمل الآن ومربوط بـ Gemini...")
-    application.run_polling()
+    import asyncio
+
+if __name__ == "__main__":
+    try:
+        # لتجنب مشاكل الـ Event Loop في إصدارات بايثون الحديثة
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+    loop.run_until_complete(application.run_polling())
+    
 
 if __name__ == '__main__':
     main()
