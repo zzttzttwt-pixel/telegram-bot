@@ -11,7 +11,7 @@ async def ask_ai(text):
         "https://openrouter.ai/api/v1/chat/completions",
         headers={"Authorization": f"Bearer {OPENROUTER_KEY}"},
         json={
-            "model": "meta-llama/llama-3.1-8b-instruct:free",
+            "model": "google/gemma-3-4b-it:free",
             "messages": [{"role": "user", "content": text}]
         }
     )
